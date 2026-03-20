@@ -4,7 +4,7 @@ Tiny React component for showing mobile touch points while recording demos from 
 
 ## Demo
 
-<video src="https://github.com/user-attachments/assets/cda8aad0-49ae-4b32-8b8d-97e61867bf0c" controls muted playsinline></video>
+<video src="https://github.com/user-attachments/assets/76845444-ac6f-40bc-81b5-9d85541d3637" controls muted playsinline></video>
 
 ## Install
 
