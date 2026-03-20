@@ -2,9 +2,9 @@
 
 Tiny React component for showing mobile touch points while recording demos from a device or a Simulator.
 
-## What it is for
+## Demo
 
-Use it when you need touch interactions to stay visible in recordings. Just a small demo/debugging aid.
+<video src="./.github/demo.mp4" controls muted playsinline></video>
 
 ## Install
 
