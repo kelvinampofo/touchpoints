@@ -12,9 +12,6 @@
     "url": "https://github.com/kelvinampofo/touchpoints/issues"
   },
   "type": "module",
-  "sideEffects": [
-    "**/*.css"
-  ],
   "files": [
     "dist",
     "README.md"
