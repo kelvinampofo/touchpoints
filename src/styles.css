@@ -1,0 +1,64 @@
+.touchpoints-root,
+.touchpoints-toggle,
+.touchpoints-dot {
+  --radius: 999px;
+  --ease: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --dot-bg: rgba(24, 24, 27, 0.22);
+  --dot-border: rgba(255, 255, 255, 0.14);
+  --dot-shadow: rgba(0, 0, 0, 0.18);
+  --toggle-border: hsla(0, 0%, 100%, 0.077);
+  --toggle-bg: color-mix(in srgb, #161616 72%, transparent);
+  --toggle-fg: #ededed;
+  --toggle-shadow: lch(0% 0 0 / 0.03) 0 1px 1px, lch(0% 0 0 / 0.08) 0 2px 4px -2px;
+  --toggle-icon-fg: hsla(0, 0%, 100%, 0.249);
+}
+
+.touchpoints-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.touchpoints-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--touchpoints-size);
+  height: var(--touchpoints-size);
+  border-radius: var(--radius);
+  pointer-events: none;
+  user-select: none;
+  transform: translate3d(
+    calc(var(--touchpoints-x) - (var(--touchpoints-size) * 0.5)),
+    calc(var(--touchpoints-y) - (var(--touchpoints-size) * 0.5)),
+    0
+  );
+}
+
+.touchpoints-dot-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--dot-bg);
+  border: var(--touchpoints-border, none);
+  box-shadow:
+    0 0 0 1px var(--dot-border),
+    0 10px 30px var(--dot-shadow);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  animation: touchpoints-in 180ms var(--ease) forwards;
+}
+
+@keyframes touchpoints-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -27,8 +27,8 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "build": "tsup src/index.ts --format esm,cjs --dts --inject-style",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --inject-style --watch",
     "test": "vitest run"
   },
   "peerDependencies": {
