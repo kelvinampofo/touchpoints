@@ -4,8 +4,6 @@
   --touchpoints-in-duration: 100ms;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dot-bg: rgba(24, 24, 27, 0.22);
-  --dot-border: rgba(255, 255, 255, 0.14);
-  --dot-shadow: rgba(0, 0, 0, 0.18);
 }
 
 .touchpoints-root {
@@ -38,9 +36,6 @@
   border-radius: inherit;
   background: var(--dot-bg);
   border: var(--touchpoints-border, none);
-  box-shadow:
-    0 0 0 1px var(--dot-border),
-    0 10px 30px var(--dot-shadow);
   backdrop-filter: blur(10px) saturate(1.1);
   -webkit-backdrop-filter: blur(10px) saturate(1.1);
   animation: touchpoints-in var(--touchpoints-in-duration) var(--ease) forwards;
