@@ -1,7 +1,8 @@
 .touchpoints-root,
 .touchpoints-dot {
   --radius: 999px;
-  --ease: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --touchpoints-in-duration: 100ms;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dot-bg: rgba(24, 24, 27, 0.22);
   --dot-border: rgba(255, 255, 255, 0.14);
   --dot-shadow: rgba(0, 0, 0, 0.18);
@@ -42,13 +43,15 @@
     0 10px 30px var(--dot-shadow);
   backdrop-filter: blur(10px) saturate(1.1);
   -webkit-backdrop-filter: blur(10px) saturate(1.1);
-  animation: touchpoints-in 180ms var(--ease) forwards;
+  animation: touchpoints-in var(--touchpoints-in-duration) var(--ease) forwards;
+  transform-origin: center;
+  will-change: transform, opacity;
 }
 
 @keyframes touchpoints-in {
   from {
-    opacity: 0;
-    transform: scale(0.92);
+    opacity: 0.32;
+    transform: scale(0.96);
   }
 
   to {
