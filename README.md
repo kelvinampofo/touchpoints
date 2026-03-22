@@ -1,10 +1,8 @@
 # touchpoints
 
+![Illustration of an iPhone screen with placeholder text lines and a hand touching the screen showing an indicator](./banner.png)
+
 Tiny React component for showing mobile touch points while recording demos from a device or a Simulator.
-
-## Demo
-
-<video src="https://github.com/user-attachments/assets/76845444-ac6f-40bc-81b5-9d85541d3637" controls muted playsinline></video>
 
 ## Install
 
@@ -49,7 +47,7 @@ process.env.NODE_ENV !== "production" ? <TouchPoints /> : null;
 
 ## Configuration
 
-You can customise the touch dot indicator itself with the `size`, `color`, and `border` props:
+You can customise the indicator with `size`, `color`, and `border`:
 
 ```tsx
 <TouchPoints size={50} color="hotpink" border="3px solid blue" />
