@@ -1,16 +1,10 @@
 .touchpoints-root,
-.touchpoints-toggle,
 .touchpoints-dot {
   --radius: 999px;
   --ease: cubic-bezier(0.215, 0.61, 0.355, 1);
   --dot-bg: rgba(24, 24, 27, 0.22);
   --dot-border: rgba(255, 255, 255, 0.14);
   --dot-shadow: rgba(0, 0, 0, 0.18);
-  --toggle-border: hsla(0, 0%, 100%, 0.077);
-  --toggle-bg: color-mix(in srgb, #161616 72%, transparent);
-  --toggle-fg: #ededed;
-  --toggle-shadow: lch(0% 0 0 / 0.03) 0 1px 1px, lch(0% 0 0 / 0.08) 0 2px 4px -2px;
-  --toggle-icon-fg: hsla(0, 0%, 100%, 0.249);
 }
 
 .touchpoints-root {
