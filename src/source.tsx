@@ -1,4 +1,5 @@
 import React from "react";
+
 import "./styles.css";
 
 const DEFAULT_DOT_SIZE = 40;
@@ -27,47 +28,102 @@ function useHydration() {
 
 function useTouchPoints() {
   const [points, setPoints] = React.useState<Point[]>([]);
+
+  const pointsRef = React.useRef(new Map<number, Point>());
+  const frameRef = React.useRef<number | null>(null);
+
   const hydrated = useHydration();
 
   React.useEffect(() => {
+    function cancelFrame() {
+      if (frameRef.current === null) {
+        return;
+      }
+
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+
+    function flushPoints() {
+      frameRef.current = null;
+      setPoints(Array.from(pointsRef.current.values()));
+    }
+
+    function scheduleFlush() {
+      if (frameRef.current !== null) {
+        return;
+      }
+
+      frameRef.current = requestAnimationFrame(flushPoints);
+    }
+
+    function clearPoints() {
+      if (pointsRef.current.size === 0) {
+        cancelFrame();
+        setPoints((current) => (current.length === 0 ? current : []));
+        return;
+      }
+
+      pointsRef.current.clear();
+      cancelFrame();
+      setPoints([]);
+    }
+
+    function resetPoints() {
+      pointsRef.current.clear();
+      cancelFrame();
+    }
+
     if (!hydrated) {
+      clearPoints();
       return;
     }
 
     function handlePointerDown(event: PointerEvent) {
-      if (event.pointerType === "mouse") {
+      if (event.pointerType !== "touch") {
         return;
       }
 
-      setPoints((current) =>
-        current
-          .filter((point) => point.id !== event.pointerId)
-          .concat({
-            id: event.pointerId,
-            x: event.clientX,
-            y: event.clientY,
-          }),
-      );
+      pointsRef.current.set(event.pointerId, {
+        id: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+      });
+      scheduleFlush();
     }
 
     function handlePointerMove(event: PointerEvent) {
-      if (event.pointerType === "mouse") {
+      if (event.pointerType !== "touch") {
         return;
       }
 
-      setPoints((current) =>
-        current.map((point) =>
-          point.id === event.pointerId
-            ? { ...point, x: event.clientX, y: event.clientY }
-            : point,
-        ),
-      );
+      const point = pointsRef.current.get(event.pointerId);
+
+      if (!point) {
+        return;
+      }
+
+      pointsRef.current.set(event.pointerId, {
+        ...point,
+        x: event.clientX,
+        y: event.clientY,
+      });
+      scheduleFlush();
     }
 
     function handlePointerEnd(event: PointerEvent) {
-      setPoints((current) =>
-        current.filter((point) => point.id !== event.pointerId),
-      );
+      if (!pointsRef.current.has(event.pointerId)) {
+        return;
+      }
+
+      pointsRef.current.delete(event.pointerId);
+      scheduleFlush();
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        clearPoints();
+      }
     }
 
     const controller = new AbortController();
@@ -80,9 +136,18 @@ function useTouchPoints() {
     window.addEventListener("pointermove", handlePointerMove, options);
     window.addEventListener("pointerup", handlePointerEnd, options);
     window.addEventListener("pointercancel", handlePointerEnd, options);
+    window.addEventListener("blur", clearPoints, options);
+    window.addEventListener("pagehide", clearPoints, options);
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange,
+      options,
+    );
 
     return () => {
       controller.abort();
+      resetPoints();
     };
   }, [hydrated]);
 

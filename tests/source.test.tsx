@@ -32,6 +32,10 @@ function getDotCount() {
   return document.querySelectorAll(".touchpoints-dot").length;
 }
 
+function getDot(index = 0) {
+  return document.querySelectorAll<HTMLElement>(".touchpoints-dot")[index] ?? null;
+}
+
 function waitFor(assertion: () => void, timeout = 1000) {
   const startedAt = Date.now();
 
@@ -96,6 +100,140 @@ describe("<TouchPoints />", () => {
 
     await waitFor(() => {
       expect(getDotCount()).toBe(0);
+    });
+
+    view.unmount();
+  });
+
+  it("should ignore non-touch pointers", async () => {
+    const view = await render(<TouchPoints />);
+
+    act(() => {
+      window.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          clientX: 40,
+          clientY: 50,
+          pointerId: 1,
+          pointerType: "mouse",
+        }),
+      );
+      window.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          clientX: 60,
+          clientY: 70,
+          pointerId: 2,
+          pointerType: "pen",
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(0);
+    });
+
+    view.unmount();
+  });
+
+  it("should update touch marker positions on pointer move", async () => {
+    const view = await render(<TouchPoints />);
+
+    act(() => {
+      window.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          clientX: 120,
+          clientY: 160,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(1);
+    });
+
+    act(() => {
+      window.dispatchEvent(
+        new PointerEvent("pointermove", {
+          clientX: 180,
+          clientY: 220,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDot()?.style.getPropertyValue("--touchpoints-x")).toBe("180px");
+      expect(getDot()?.style.getPropertyValue("--touchpoints-y")).toBe("220px");
+    });
+
+    view.unmount();
+  });
+
+  it("should clear active markers on page blur", async () => {
+    const view = await render(<TouchPoints />);
+
+    act(() => {
+      window.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          clientX: 120,
+          clientY: 160,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(1);
+    });
+
+    act(() => {
+      window.dispatchEvent(new Event("blur"));
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(0);
+    });
+
+    view.unmount();
+  });
+
+  it("should clear active markers when the document becomes hidden", async () => {
+    const view = await render(<TouchPoints />);
+
+    act(() => {
+      window.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          clientX: 120,
+          clientY: 160,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(1);
+    });
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(0);
+    });
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
     });
 
     view.unmount();
