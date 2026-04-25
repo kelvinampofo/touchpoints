@@ -10,7 +10,7 @@ interface Point {
   y: number;
 }
 
-interface TouchPointsProps {
+export interface TouchPointsProps {
   size?: number;
   color?: string;
   border?: string;
