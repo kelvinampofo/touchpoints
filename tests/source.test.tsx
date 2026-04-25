@@ -3,7 +3,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 
-import { TouchPoints } from "../src/source";
+import { TouchPoints, type TouchPointsProps } from "../src";
 
 async function render(ui: React.ReactNode) {
   const container = document.createElement("div");
@@ -36,6 +36,26 @@ function getDot(index = 0) {
   return document.querySelectorAll<HTMLElement>(".touchpoints-dot")[index] ?? null;
 }
 
+function touchEvent(
+  type: string,
+  {
+    clientX,
+    clientY,
+    pointerId,
+  }: {
+    clientX: number;
+    clientY: number;
+    pointerId: number;
+  },
+) {
+  return new PointerEvent(type, {
+    clientX,
+    clientY,
+    pointerId,
+    pointerType: "touch",
+  });
+}
+
 function waitFor(assertion: () => void, timeout = 1000) {
   const startedAt = Date.now();
 
@@ -59,6 +79,16 @@ function waitFor(assertion: () => void, timeout = 1000) {
 }
 
 describe("<TouchPoints />", () => {
+  it("should expose its props type from the public entry", () => {
+    const props = {
+      size: 48,
+      color: "hotpink",
+      border: "2px solid blue",
+    } satisfies TouchPointsProps;
+
+    expect(props.size).toBe(48);
+  });
+
   it("should render the overlay after hydration", async () => {
     const view = await render(<TouchPoints />);
 
@@ -74,11 +104,10 @@ describe("<TouchPoints />", () => {
 
     act(() => {
       window.dispatchEvent(
-        new PointerEvent("pointerdown", {
+        touchEvent("pointerdown", {
           clientX: 120,
           clientY: 160,
           pointerId: 1,
-          pointerType: "touch",
         }),
       );
     });
@@ -89,17 +118,59 @@ describe("<TouchPoints />", () => {
 
     act(() => {
       window.dispatchEvent(
-        new PointerEvent("pointerup", {
+        touchEvent("pointerup", {
           clientX: 120,
           clientY: 160,
           pointerId: 1,
-          pointerType: "touch",
         }),
       );
     });
 
     await waitFor(() => {
       expect(getDotCount()).toBe(0);
+    });
+
+    view.unmount();
+  });
+
+  it("should render multiple active touch markers independently", async () => {
+    const view = await render(<TouchPoints />);
+
+    act(() => {
+      window.dispatchEvent(
+        touchEvent("pointerdown", {
+          clientX: 120,
+          clientY: 160,
+          pointerId: 1,
+        }),
+      );
+      window.dispatchEvent(
+        touchEvent("pointerdown", {
+          clientX: 220,
+          clientY: 260,
+          pointerId: 2,
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(2);
+    });
+
+    act(() => {
+      window.dispatchEvent(
+        touchEvent("pointerup", {
+          clientX: 120,
+          clientY: 160,
+          pointerId: 1,
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(1);
+      expect(getDot()?.style.getPropertyValue("--touchpoints-x")).toBe("220px");
+      expect(getDot()?.style.getPropertyValue("--touchpoints-y")).toBe("260px");
     });
 
     view.unmount();
@@ -139,11 +210,10 @@ describe("<TouchPoints />", () => {
 
     act(() => {
       window.dispatchEvent(
-        new PointerEvent("pointerdown", {
+        touchEvent("pointerdown", {
           clientX: 120,
           clientY: 160,
           pointerId: 1,
-          pointerType: "touch",
         }),
       );
     });
@@ -154,11 +224,10 @@ describe("<TouchPoints />", () => {
 
     act(() => {
       window.dispatchEvent(
-        new PointerEvent("pointermove", {
+        touchEvent("pointermove", {
           clientX: 180,
           clientY: 220,
           pointerId: 1,
-          pointerType: "touch",
         }),
       );
     });
@@ -171,16 +240,50 @@ describe("<TouchPoints />", () => {
     view.unmount();
   });
 
+  it("should ignore non-touch pointer end events", async () => {
+    const view = await render(<TouchPoints />);
+
+    act(() => {
+      window.dispatchEvent(
+        touchEvent("pointerdown", {
+          clientX: 120,
+          clientY: 160,
+          pointerId: 1,
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(1);
+    });
+
+    act(() => {
+      window.dispatchEvent(
+        new PointerEvent("pointerup", {
+          clientX: 120,
+          clientY: 160,
+          pointerId: 1,
+          pointerType: "mouse",
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(1);
+    });
+
+    view.unmount();
+  });
+
   it("should clear active markers on page blur", async () => {
     const view = await render(<TouchPoints />);
 
     act(() => {
       window.dispatchEvent(
-        new PointerEvent("pointerdown", {
+        touchEvent("pointerdown", {
           clientX: 120,
           clientY: 160,
           pointerId: 1,
-          pointerType: "touch",
         }),
       );
     });
@@ -205,11 +308,10 @@ describe("<TouchPoints />", () => {
 
     act(() => {
       window.dispatchEvent(
-        new PointerEvent("pointerdown", {
+        touchEvent("pointerdown", {
           clientX: 120,
           clientY: 160,
           pointerId: 1,
-          pointerType: "touch",
         }),
       );
     });
@@ -237,5 +339,29 @@ describe("<TouchPoints />", () => {
     });
 
     view.unmount();
+  });
+
+  it("should remove global listeners on unmount", async () => {
+    const view = await render(<TouchPoints />);
+
+    await waitFor(() => {
+      expect(getRoot()).not.toBeNull();
+    });
+
+    view.unmount();
+
+    act(() => {
+      window.dispatchEvent(
+        touchEvent("pointerdown", {
+          clientX: 120,
+          clientY: 160,
+          pointerId: 1,
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(getDotCount()).toBe(0);
+    });
   });
 });

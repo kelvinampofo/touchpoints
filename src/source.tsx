@@ -112,6 +112,10 @@ function useTouchPoints() {
     }
 
     function handlePointerEnd(event: PointerEvent) {
+      if (event.pointerType !== "touch") {
+        return;
+      }
+
       if (!pointsRef.current.has(event.pointerId)) {
         return;
       }
@@ -127,7 +131,7 @@ function useTouchPoints() {
     }
 
     const controller = new AbortController();
-    const options = {
+    const options: AddEventListenerOptions = {
       passive: true,
       signal: controller.signal,
     };
