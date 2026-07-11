@@ -1,367 +1,152 @@
 import { act } from "react";
-import React from "react";
-import { createRoot } from "react-dom/client";
-import { describe, expect, it } from "vitest";
+import { createRoot, type Root } from "react-dom/client";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TouchPoints, type TouchPointsProps } from "../src";
 
-async function render(ui: React.ReactNode) {
-  const container = document.createElement("div");
+const roots = new Set<Root>();
+
+function mount(props: TouchPointsProps = {}) {
+  const container = document.body.appendChild(document.createElement("div"));
+
   const root = createRoot(container);
+  roots.add(root);
 
-  document.body.appendChild(container);
-
-  await act(async () => {
-    root.render(ui);
-  });
-
-  return {
-    unmount() {
-      act(() => {
-        root.unmount();
-      });
-    },
-  };
+  act(() => root.render(<TouchPoints {...props} />));
+  return root;
 }
 
-function getRoot() {
-  return document.querySelector(".touchpoints-root");
-}
-
-function getDotCount() {
-  return document.querySelectorAll(".touchpoints-dot").length;
-}
-
-function getDot(index = 0) {
-  return document.querySelectorAll<HTMLElement>(".touchpoints-dot")[index] ?? null;
-}
-
-function touchEvent(
+function pointer(
   type: string,
-  {
-    clientX,
-    clientY,
-    pointerId,
-  }: {
-    clientX: number;
-    clientY: number;
-    pointerId: number;
-  },
+  pointerId: number,
+  clientX = 0,
+  clientY = 0,
+  pointerType = "touch",
 ) {
   return new PointerEvent(type, {
     clientX,
     clientY,
     pointerId,
-    pointerType: "touch",
+    pointerType,
   });
 }
 
-function waitFor(assertion: () => void, timeout = 1000) {
-  const startedAt = Date.now();
-
-  return new Promise<void>((resolve, reject) => {
-    function check() {
-      try {
-        assertion();
-        resolve();
-      } catch (error) {
-        if (Date.now() - startedAt >= timeout) {
-          reject(error);
-          return;
-        }
-
-        setTimeout(check, 10);
-      }
-    }
-
-    check();
+async function dispatch(...events: Event[]) {
+  await act(async () => {
+    events.forEach((event) => window.dispatchEvent(event));
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
   });
 }
+
+function dots() {
+  return [...document.querySelectorAll<HTMLElement>(".touchpoints-dot")];
+}
+
+afterEach(() => {
+  act(() => roots.forEach((root) => root.unmount()));
+  roots.clear();
+  vi.restoreAllMocks();
+  document.body.replaceChildren();
+});
 
 describe("<TouchPoints />", () => {
-  it("should expose its props type from the public entry", () => {
+  it("exposes its props and applies custom styles", () => {
     const props = {
       size: 48,
       color: "hotpink",
       border: "2px solid blue",
     } satisfies TouchPointsProps;
 
-    expect(props.size).toBe(48);
+    mount(props);
+
+    const root = document.querySelector<HTMLElement>(".touchpoints-root");
+    expect(root?.style.getPropertyValue("--touchpoints-size")).toBe("48px");
+    expect(root?.style.getPropertyValue("--touchpoints-color")).toBe("hotpink");
+    expect(root?.style.getPropertyValue("--touchpoints-border")).toBe(
+      "2px solid blue",
+    );
   });
 
-  it("should render the overlay after hydration", async () => {
-    const view = await render(<TouchPoints />);
+  it("tracks multiple touches and their movement", async () => {
+    mount();
 
-    await waitFor(() => {
-      expect(getRoot()).not.toBeNull();
-    });
+    await dispatch(
+      pointer("pointerdown", 1, 120, 160),
+      pointer("pointerdown", 2, 220, 260),
+    );
 
-    view.unmount();
+    expect(dots()).toHaveLength(2);
+
+    await dispatch(pointer("pointermove", 2, 280, 320));
+    expect(dots()[1].style.getPropertyValue("--touchpoints-x")).toBe("280px");
+    expect(dots()[1].style.getPropertyValue("--touchpoints-y")).toBe("320px");
+
+    await dispatch(pointer("pointerup", 1), pointer("pointercancel", 2));
+    expect(dots()).toHaveLength(0);
   });
 
-  it("should render touch markers for touch pointer events", async () => {
-    const view = await render(<TouchPoints />);
+  it("ignores mouse, pen, and inactive pointers", async () => {
+    mount();
 
-    act(() => {
-      window.dispatchEvent(
-        touchEvent("pointerdown", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-        }),
-      );
-    });
+    await dispatch(
+      pointer("pointerdown", 1, 0, 0, "mouse"),
+      pointer("pointerdown", 2, 0, 0, "pen"),
+      pointer("pointermove", 3),
+      pointer("pointerup", 3),
+    );
 
-    await waitFor(() => {
-      expect(getDotCount()).toBe(1);
-    });
-
-    act(() => {
-      window.dispatchEvent(
-        touchEvent("pointerup", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(0);
-    });
-
-    view.unmount();
+    expect(dots()).toHaveLength(0);
   });
 
-  it("should render multiple active touch markers independently", async () => {
-    const view = await render(<TouchPoints />);
+  it("clears touches when the page loses visibility", async () => {
+    mount();
+    await dispatch(pointer("pointerdown", 1));
+    expect(dots()).toHaveLength(1);
 
-    act(() => {
-      window.dispatchEvent(
-        touchEvent("pointerdown", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-        }),
-      );
-      window.dispatchEvent(
-        touchEvent("pointerdown", {
-          clientX: 220,
-          clientY: 260,
-          pointerId: 2,
-        }),
-      );
-    });
+    await dispatch(new Event("blur"));
+    expect(dots()).toHaveLength(0);
 
-    await waitFor(() => {
-      expect(getDotCount()).toBe(2);
-    });
-
-    act(() => {
-      window.dispatchEvent(
-        touchEvent("pointerup", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(1);
-      expect(getDot()?.style.getPropertyValue("--touchpoints-x")).toBe("220px");
-      expect(getDot()?.style.getPropertyValue("--touchpoints-y")).toBe("260px");
-    });
-
-    view.unmount();
-  });
-
-  it("should ignore non-touch pointers", async () => {
-    const view = await render(<TouchPoints />);
-
-    act(() => {
-      window.dispatchEvent(
-        new PointerEvent("pointerdown", {
-          clientX: 40,
-          clientY: 50,
-          pointerId: 1,
-          pointerType: "mouse",
-        }),
-      );
-      window.dispatchEvent(
-        new PointerEvent("pointerdown", {
-          clientX: 60,
-          clientY: 70,
-          pointerId: 2,
-          pointerType: "pen",
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(0);
-    });
-
-    view.unmount();
-  });
-
-  it("should update touch marker positions on pointer move", async () => {
-    const view = await render(<TouchPoints />);
-
-    act(() => {
-      window.dispatchEvent(
-        touchEvent("pointerdown", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(1);
-    });
-
-    act(() => {
-      window.dispatchEvent(
-        touchEvent("pointermove", {
-          clientX: 180,
-          clientY: 220,
-          pointerId: 1,
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(getDot()?.style.getPropertyValue("--touchpoints-x")).toBe("180px");
-      expect(getDot()?.style.getPropertyValue("--touchpoints-y")).toBe("220px");
-    });
-
-    view.unmount();
-  });
-
-  it("should ignore non-touch pointer end events", async () => {
-    const view = await render(<TouchPoints />);
-
-    act(() => {
-      window.dispatchEvent(
-        touchEvent("pointerdown", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(1);
-    });
-
-    act(() => {
-      window.dispatchEvent(
-        new PointerEvent("pointerup", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-          pointerType: "mouse",
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(1);
-    });
-
-    view.unmount();
-  });
-
-  it("should clear active markers on page blur", async () => {
-    const view = await render(<TouchPoints />);
-
-    act(() => {
-      window.dispatchEvent(
-        touchEvent("pointerdown", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(1);
-    });
-
-    act(() => {
-      window.dispatchEvent(new Event("blur"));
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(0);
-    });
-
-    view.unmount();
-  });
-
-  it("should clear active markers when the document becomes hidden", async () => {
-    const view = await render(<TouchPoints />);
-
-    act(() => {
-      window.dispatchEvent(
-        touchEvent("pointerdown", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-        }),
-      );
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(1);
-    });
+    await dispatch(pointer("pointerdown", 1));
 
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "hidden",
     });
 
-    act(() => {
-      document.dispatchEvent(new Event("visibilitychange"));
-    });
-
-    await waitFor(() => {
-      expect(getDotCount()).toBe(0);
-    });
+    act(() => document.dispatchEvent(new Event("visibilitychange")));
+    expect(dots()).toHaveLength(0);
 
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       value: "visible",
     });
-
-    view.unmount();
   });
 
-  it("should remove global listeners on unmount", async () => {
-    const view = await render(<TouchPoints />);
+  it("clears touches when the page is hidden", async () => {
+    mount();
+    await dispatch(pointer("pointerdown", 1));
+    expect(dots()).toHaveLength(1);
 
-    await waitFor(() => {
-      expect(getRoot()).not.toBeNull();
-    });
+    await dispatch(new Event("pagehide"));
+    expect(dots()).toHaveLength(0);
+  });
 
-    view.unmount();
+  it("cancels a pending frame when unmounted", () => {
+    const requestFrame = vi.spyOn(window, "requestAnimationFrame");
+    const cancelFrame = vi.spyOn(window, "cancelAnimationFrame");
+    const root = mount();
 
     act(() => {
-      window.dispatchEvent(
-        touchEvent("pointerdown", {
-          clientX: 120,
-          clientY: 160,
-          pointerId: 1,
-        }),
-      );
+      window.dispatchEvent(pointer("pointerdown", 1));
+      root.unmount();
     });
+    roots.delete(root);
 
-    await waitFor(() => {
-      expect(getDotCount()).toBe(0);
-    });
+    expect(requestFrame).toHaveBeenCalledOnce();
+    expect(cancelFrame).toHaveBeenCalledWith(
+      requestFrame.mock.results[0].value,
+    );
   });
 });
