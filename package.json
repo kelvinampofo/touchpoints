@@ -2,6 +2,10 @@
   "name": "touchpoints",
   "version": "0.2.2",
   "description": "Show mobile web touch points while recording demos.",
+  "author": {
+    "name": "Kelvin Ampofo",
+    "url": "https://github.com/kelvinampofo"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,8 +17,7 @@
   },
   "type": "module",
   "files": [
-    "dist",
-    "README.md"
+    "dist"
   ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -27,9 +30,11 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --inject-style",
-    "dev": "tsup src/index.ts --format esm,cjs --dts --inject-style --watch",
-    "test": "vitest run"
+    "build": "tsup src/index.tsx --format esm,cjs --inject-style --clean && tsc --project tsconfig.build.json",
+    "dev": "tsup src/index.tsx --format esm,cjs --inject-style --watch",
+    "prepack": "npm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
     "react": ">=19",
@@ -38,10 +43,9 @@
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^9.39.2",
     "jsdom": "^29.0.1",
     "tsup": "^8.5.0",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.0"
   }
 }
