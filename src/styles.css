@@ -16,44 +16,17 @@
 .touchpoints-dot {
   position: fixed;
   inset: 0 auto auto 0;
+  box-sizing: border-box;
   width: var(--touchpoints-size);
   height: var(--touchpoints-size);
+  border: var(--touchpoints-border, none);
   border-radius: 50%;
+  background: var(--touchpoints-color);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
   transform: translate3d(
     calc(var(--touchpoints-x) - (var(--touchpoints-size) * 0.5)),
     calc(var(--touchpoints-y) - (var(--touchpoints-size) * 0.5)),
     0
   );
-}
-
-.touchpoints-dot::after {
-  position: absolute;
-  inset: 0;
-  box-sizing: border-box;
-  border-radius: inherit;
-  background: var(--touchpoints-color);
-  border: var(--touchpoints-border, none);
-  backdrop-filter: blur(10px) saturate(1.1);
-  -webkit-backdrop-filter: blur(10px) saturate(1.1);
-  animation: touchpoints-in 100ms cubic-bezier(0.16, 1, 0.3, 1);
-  content: "";
-  will-change: transform, opacity;
-}
-
-@keyframes touchpoints-in {
-  from {
-    opacity: 0.32;
-    transform: scale(0.96);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .touchpoints-dot::after {
-    animation: none;
-  }
 }
