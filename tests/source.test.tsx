@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TouchPoints, type TouchPointsProps } from "../src";
 
@@ -13,6 +13,7 @@ function mount(props: TouchPointsProps = {}) {
   roots.add(root);
 
   act(() => root.render(<TouchPoints {...props} />));
+  return root;
 }
 
 function pointer(
@@ -46,6 +47,7 @@ function dots() {
 afterEach(() => {
   act(() => roots.forEach((root) => root.unmount()));
   roots.clear();
+  vi.restoreAllMocks();
   document.body.replaceChildren();
 });
 
@@ -120,5 +122,31 @@ describe("<TouchPoints />", () => {
       configurable: true,
       value: "visible",
     });
+  });
+
+  it("clears touches when the page is hidden", async () => {
+    mount();
+    await dispatch(pointer("pointerdown", 1));
+    expect(dots()).toHaveLength(1);
+
+    await dispatch(new Event("pagehide"));
+    expect(dots()).toHaveLength(0);
+  });
+
+  it("cancels a pending frame when unmounted", () => {
+    const requestFrame = vi.spyOn(window, "requestAnimationFrame");
+    const cancelFrame = vi.spyOn(window, "cancelAnimationFrame");
+    const root = mount();
+
+    act(() => {
+      window.dispatchEvent(pointer("pointerdown", 1));
+      root.unmount();
+    });
+    roots.delete(root);
+
+    expect(requestFrame).toHaveBeenCalledOnce();
+    expect(cancelFrame).toHaveBeenCalledWith(
+      requestFrame.mock.results[0].value,
+    );
   });
 });
