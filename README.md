@@ -5,7 +5,7 @@ A tiny React component for showing mobile touch points while recording demos.
 ## Install
 
 ```plain
-npm install touchpoints
+npm install --save-dev touchpoints
 ```
 
 ## Usage
