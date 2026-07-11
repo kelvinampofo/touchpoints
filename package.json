@@ -34,7 +34,8 @@
     "dev": "tsup src/index.tsx --format esm,cjs --inject-style --watch",
     "prepack": "npm run build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm test && npm run build"
   },
   "peerDependencies": {
     "react": ">=19",
