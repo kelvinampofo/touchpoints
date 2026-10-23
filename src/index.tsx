@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import "./styles.css";
 
 interface Point {
-  id: number;
+  sequence: number;
   x: number;
   y: number;
+  released?: boolean;
 }
 
 /** Options for customising the touch indicator. */
@@ -25,6 +26,10 @@ function useTouchPoints() {
 
   const activePoints = useRef(new Map<number, Point>());
   const frameId = useRef<number | null>(null);
+  const releaseTimers = useRef(
+    new Map<number, ReturnType<typeof setTimeout>>(),
+  );
+  const nextSequence = useRef(0);
 
   useEffect(() => {
     function cancelFrame() {
@@ -44,6 +49,8 @@ function useTouchPoints() {
     }
 
     function clearPoints() {
+      releaseTimers.current.forEach(clearTimeout);
+      releaseTimers.current.clear();
       activePoints.current.clear();
 
       cancelFrame();
@@ -53,8 +60,10 @@ function useTouchPoints() {
     function handlePointerDown(event: PointerEvent) {
       if (event.pointerType !== "touch") return;
 
+      clearTimeout(releaseTimers.current.get(event.pointerId));
+      releaseTimers.current.delete(event.pointerId);
       activePoints.current.set(event.pointerId, {
-        id: event.pointerId,
+        sequence: nextSequence.current++,
         x: event.clientX,
         y: event.clientY,
       });
@@ -63,15 +72,13 @@ function useTouchPoints() {
     }
 
     function handlePointerMove(event: PointerEvent) {
-      if (
-        event.pointerType !== "touch" ||
-        !activePoints.current.has(event.pointerId)
-      ) {
+      const point = activePoints.current.get(event.pointerId);
+      if (event.pointerType !== "touch" || !point || point.released) {
         return;
       }
 
       activePoints.current.set(event.pointerId, {
-        id: event.pointerId,
+        ...point,
         x: event.clientX,
         y: event.clientY,
       });
@@ -82,9 +89,24 @@ function useTouchPoints() {
     function handlePointerEnd(event: PointerEvent) {
       if (event.pointerType !== "touch") return;
 
-      if (activePoints.current.delete(event.pointerId)) {
-        scheduleFlush();
+      const point = activePoints.current.get(event.pointerId);
+      if (!point || point.released) return;
+
+      if (event.type === "pointercancel") {
+        activePoints.current.delete(event.pointerId);
+      } else {
+        activePoints.current.set(event.pointerId, { ...point, released: true });
+        releaseTimers.current.set(
+          event.pointerId,
+          setTimeout(() => {
+            releaseTimers.current.delete(event.pointerId);
+            activePoints.current.delete(event.pointerId);
+            scheduleFlush();
+          }, 450),
+        );
       }
+
+      scheduleFlush();
     }
 
     function handleVisibilityChange() {
@@ -109,6 +131,8 @@ function useTouchPoints() {
 
     return () => {
       controller.abort();
+      releaseTimers.current.forEach(clearTimeout);
+      releaseTimers.current.clear();
       activePoints.current.clear();
 
       cancelFrame();
@@ -145,10 +169,11 @@ export function TouchPoints({ size = 40, color, border }: TouchPointsProps) {
         "--touchpoints-border": border,
       }}
     >
-      {points.map(({ id, x, y }) => (
+      {points.map(({ sequence, x, y, released }) => (
         <div
-          key={id}
+          key={sequence}
           className="touchpoints-dot"
+          data-released={released || undefined}
           style={{
             "--touchpoints-x": `${x}px`,
             "--touchpoints-y": `${y}px`,
