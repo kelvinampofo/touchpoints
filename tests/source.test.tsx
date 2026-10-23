@@ -84,7 +84,33 @@ describe("<TouchPoints />", () => {
     expect(dots()[1].style.getPropertyValue("--touchpoints-y")).toBe("320px");
 
     await dispatch(pointer("pointerup", 1), pointer("pointercancel", 2));
+    expect(dots()).toHaveLength(1);
+    expect(dots()[0].dataset.released).toBe("true");
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
     expect(dots()).toHaveLength(0);
+  });
+
+  it("preserves a tap that ends before the next frame", async () => {
+    mount();
+    await dispatch(pointer("pointerdown", 1, 120, 160), pointer("pointerup", 1));
+    expect(dots()).toHaveLength(1);
+    expect(dots()[0].dataset.released).toBe("true");
+  });
+
+  it("does not let a previous release remove a reused pointer", async () => {
+    mount();
+    await dispatch(pointer("pointerdown", 1), pointer("pointerup", 1));
+    const previousDot = dots()[0];
+    await dispatch(pointer("pointerdown", 1, 220, 260));
+    expect(dots()[0]).not.toBe(previousDot);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
+    expect(dots()).toHaveLength(1);
+    expect(dots()[0].dataset.released).toBeUndefined();
+    expect(dots()[0].style.getPropertyValue("--touchpoints-x")).toBe("220px");
   });
 
   it("ignores mouse, pen, and inactive pointers", async () => {

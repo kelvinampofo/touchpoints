@@ -24,9 +24,44 @@
   background: var(--touchpoints-color);
   backdrop-filter: blur(10px) saturate(1.1);
   -webkit-backdrop-filter: blur(10px) saturate(1.1);
-  transform: translate3d(
-    calc(var(--touchpoints-x) - (var(--touchpoints-size) * 0.5)),
-    calc(var(--touchpoints-y) - (var(--touchpoints-size) * 0.5)),
-    0
-  );
+  translate: calc(var(--touchpoints-x) - (var(--touchpoints-size) * 0.5))
+    calc(var(--touchpoints-y) - (var(--touchpoints-size) * 0.5));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .touchpoints-dot {
+    scale: 0.65;
+    opacity: 0.35;
+    animation:
+      touchpoints-rise 100ms ease-out forwards,
+      touchpoints-fade 350ms ease-out 100ms forwards;
+  }
+}
+
+@keyframes touchpoints-rise {
+  from {
+    scale: 0.65;
+    opacity: 0.35;
+  }
+  to {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
+@keyframes touchpoints-fade {
+  from {
+    scale: 1;
+    opacity: 1;
+  }
+  to {
+    scale: 1.4;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .touchpoints-dot[data-released] {
+    visibility: hidden;
+  }
 }
